@@ -1,0 +1,280 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<title>Primitive Root Table</title>
+	<meta charset="utf-8">
+<style>
+	table{
+		border-collapse : collapse;
+	}
+	td {
+		border : 1px solid black;
+		padding : 5px 10px;
+	}
+	table.layout td {
+		border : none;
+	}
+</style>
+</head>
+
+<body style="padding:0px 10px">
+<H1>Primitive Root Table</H1>
+Find all primitive roots in the range
+<form onsubmit="return main();" style="margin:5px 0px;">
+	<table class="layout">
+		<tr>
+			<td>from </td>
+			<td><input id="from" min="1" step="1" type="number" autocomplete="off" required/></td>
+		</tr>
+		<tr>
+			<td>to </td>
+			<td><input id="to" min="1" step="1" type="number" autocomplete="off" required/></td>
+		</tr>
+	</table>
+	<input type="submit" value="confirm" style="margin:5px 0px"/>
+	<br>
+	<br>
+	Option
+	<br>
+	<input id="dontClearTable" type="checkbox"/>
+	<label for="dontClearTable">Don't clear the table</label>
+	<br>
+	<input id="showSmallest" type="checkbox"/>
+	<label for="showSmallest">Show the smallest
+		<input id="smallest" min="1" step="1" type="number" autocomplete="off" style="width:50px"/>
+		primitive roots.
+	</label>
+</form>
+<button onclick="document.getElementById('primitiveRootTable').innerHTML = '';">clear table</button>
+<br>
+<br>
+<table id="primitiveRootTable"></table>
+</body>
+<script>
+function main()
+{
+	var from = Number(document.getElementById("from").value);
+	var to = Number(document.getElementById("to").value);
+	var table = document.getElementById("primitiveRootTable");
+	var dontClearTable = document.getElementById("dontClearTable").checked;
+	var showSmallest = document.getElementById("showSmallest").checked;
+	var smallest = Number(document.getElementById("smallest").value);
+	var n;
+	var nCopy;
+	var p;
+	var k;
+	var isEven;
+	var isPrime;
+	var rootList;
+	
+	if (dontClearTable == false)
+	{
+		table.innerHTML = "";
+	}
+	if (showSmallest == false)
+	{
+		smallest = 0;
+	}
+
+	for (n = from; n <= to; n++)
+	{
+		if (n < 5)
+		{
+			if (n==1)
+			{
+				appendTableRow(n, [], table);
+			}
+			else
+			{
+				appendTableRow(n, [n - 1], table);
+			}
+			continue;
+		}
+		nCopy = n;
+		k = 1;
+		isEven = false;
+		isPrime = true;
+		rootList = [];
+		
+		if (nCopy % 2 == 0)
+		{
+			nCopy /= 2;
+			if (nCopy % 2 == 0)
+			{
+				appendTableRow(n,rootList,table);
+				continue;
+			}
+			isEven = true;
+		}
+		
+		for (var i = 3; i * i <= nCopy; i++)
+		{
+			if (nCopy % i == 0)
+			{
+				isPrime = false;
+				p = i;
+				nCopy /= p;
+				break;
+			}
+		}
+		
+		if (isPrime)
+		{
+			p = nCopy;
+		}
+		else
+		{
+			while (nCopy % p == 0)
+			{
+				nCopy /= p;
+				k++;
+			}
+			if (nCopy != 1)
+			{
+				appendTableRow(n,rootList,table);
+				continue;
+			}
+		}
+		if (smallest == 1 && k == 1 && isEven == false)
+		{
+			appendTableRow(n, [findLeastRootForPrime(p)], table);
+		}
+		else
+		{
+			rootList = findAllRoot(isEven, p, k);
+			if (smallest > 0)
+			{
+				rootList = rootList.slice(0, smallest);
+			}
+			appendTableRow(n, rootList, table);
+		}
+	}
+	return false;
+}
+
+function findAllRoot(isEven, p, k)
+{
+	var n = p ** k;
+	var phi = (p ** (k - 1)) * (p - 1);
+	var sample = findLeastRootForPrime(p);
+	var root = 1;
+	var expList;
+	var result = [];
+	
+	if (k > 1)
+	{
+		if (modularExponentiation(sample,p - 1,p*p) == 1)
+		{
+			sample += p;
+		}
+	}
+	
+	expList = getRelativelyPrimeList(phi);
+	for (var i = 1; i < expList.length; i++)
+	{
+		root = (root * sample) % n;
+		if (expList[i])
+		{
+			if (isEven && root % 2 == 0)
+			{
+				result.push(root + n);
+			}
+			else
+			{
+				result.push(root);
+			}
+		}
+	}
+	result.sort((x,y) => x - y);
+	return result;
+}
+
+function findLeastRootForPrime(p)
+{
+	var isPrimitiveRoot;
+	var exp;
+	for (var i = 1; i < p; i++)
+	{
+		isPrimitiveRoot = true;
+		factorList = findPrimeFactors(p-1);
+		for (var factor of factorList)
+		{
+			exp = (p-1) / factor;
+			if (modularExponentiation(i,exp,p) == 1)
+			{
+				isPrimitiveRoot = false;
+				break;
+			}
+		}
+		if (isPrimitiveRoot)
+		{
+			return i;
+		}
+	}
+	return 0;
+}
+
+function getRelativelyPrimeList(n)
+{
+	var result = Array(n+1).fill(true);
+	factorList = findPrimeFactors(n);
+	for (var factor of factorList)
+	{
+		for (var i = factor; i <= n; i += factor)
+		{
+			result[i] = false;
+		}
+	}
+	return result;
+}
+
+function findPrimeFactors(n, factorList=[], recentFactor = 1)
+{
+	if (n==1)
+	{
+		return factorList;
+	}
+	for (var i=recentFactor+1; i * i <= n; i++)
+	{
+		if (n % i == 0)
+		{
+			factorList.push(i);
+			while ((n /= i) % i == 0)
+			{
+			
+			}
+			return findPrimeFactors(n, factorList, i);
+		}
+	}
+	factorList.push(n);
+	return factorList;
+}
+
+function modularExponentiation(base, exp, mod)
+{
+	var bigBase = BigInt(base);
+	var bigExp = BigInt(exp);
+	var bigMod = BigInt(mod);
+	return Number((bigBase ** bigExp) % bigMod);
+}
+
+function appendTableRow(n, rootList, table)
+{
+	var str = "";
+	var tr = document.createElement("tr");
+	
+	if (rootList.length > 0)
+	{
+		for (var i = 0; i < rootList.length - 1; i++)
+		{
+			str += rootList[i] + ", ";
+		}
+		str += rootList[rootList.length - 1];
+	}
+	
+	tr.appendChild(Object.assign(document.createElement("td"),{innerHTML: n}));
+	tr.appendChild(Object.assign(document.createElement("td"),{innerHTML: str}));
+	table.appendChild(tr);
+}
+</script>
+</html>
